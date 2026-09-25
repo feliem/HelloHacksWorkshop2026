@@ -7,18 +7,44 @@ const types = [
     { name: 'Dragon', className: 'bg-indigo-500 hover:bg-indigo-600' },
   ]
 
+function formatTypeList(typeNames) {
+  const names = typeNames.map((name) => name[0].toUpperCase() + name.slice(1))
+
+  if (names.length < 2) return names[0] || 'none'
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`
+}
+
+function formatMatchup(matchup) {
+  if (matchup.error) return matchup.error
+
+  return `Your ${formatTypeList([matchup.type || 'selected'])}-type Pokémon deals half damage to ${formatTypeList(matchup.half_damage_to)} types. It takes double damage from ${formatTypeList(matchup.double_damage_from)} attacks.`
+}
+
 function App() {
   const [selectedType, setSelectedType] = useState('')
 
-  function getMatchup(type) {
-  // API CALL WILL GO HERE, AND WE WILL RETURN THE RESPONSE
-  return `Fake API response: You are fighting a ${type}-type Pokémon.`;
-}
+  async function getMatchup(type) {
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/type/${encodeURIComponent(type.toLowerCase())}`,
+      )
 
-function handleTypeClick(type) {
-  const response = getMatchup(type);
-  setSelectedType(response);
-}
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error('Could not get the type matchup:', error)
+      return { error: 'Could not load the type matchup.' }
+    }
+  }
+
+  async function handleTypeClick(type) {
+    const matchup = await getMatchup(type)
+    setSelectedType(formatMatchup({ ...matchup, type }))
+  }
 
   return (
     <main className="min-h-screen bg-amber-50 px-6 py-12 text-slate-900 sm:px-10">
